@@ -20,25 +20,27 @@ int main(int argc, char *argv[])
     int* global_colored_graph = initialize_colored_graph(csr->number_of_rows);
 
     color_csr_matrix(csr, rank, size, colored_graph, start_vertex, end_vertex);
-    
+
     int start_index = start_vertex;
     int* send_count = (int*)malloc(size * sizeof(int));
     int* displs = (int*)malloc(size * sizeof(int));
 
     send_count[rank] = end_vertex - start_vertex + 1;
     MPI_Allgather(&send_count[rank], 1, MPI_INT, send_count, 1, MPI_INT, MPI_COMM_WORLD);
-    displs[0] = start_index;
+    displs[0] = 0;
     for (int i = 1; i < size; i++) {
         displs[i] = displs[i - 1] + send_count[i - 1];
-    }
-      
+    }    
     MPI_Allgatherv(colored_graph + start_vertex, end_vertex - start_vertex + 1, MPI_INT, global_colored_graph, send_count, displs, MPI_INT, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0)
-    {
-        print_colored_graph(global_colored_graph, csr->number_of_rows);
-    }
+    
+    // Conflict table (local for each process)
+    int* conflict_table = (int*)calloc(csr->number_of_rows, sizeof(int));
 
+    //if (rank == 0)
+    //    print_colored_graph(global_colored_graph, csr->number_of_rows);
+
+    create_conflict_table(csr, rank, size, colored_graph, global_colored_graph, conflict_table, start_vertex, end_vertex);
     MPI_Finalize();
     return 0;
 }

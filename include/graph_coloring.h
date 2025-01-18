@@ -15,4 +15,4 @@ void color_csr_matrix(CSRMatrix* csr, int rank, int size, int* colored_graph, in
 
 void print_colored_graph(int* colored_graph, int number_of_rows);
 
-void detect_conflicts(CSRMatrix *csr, int rank, int size, int* colored_graph, int* conflict_table, int start_vertex, int end_vertex);
+void create_conflict_table(CSRMatrix *csr, int rank, int size, int* colored_graph, int* global_colored_graph, int* conflict_table, int start_vertex, int end_vertex);

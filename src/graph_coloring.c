@@ -18,6 +18,54 @@ void color_csr_matrix(CSRMatrix* csr, int rank, int size, int* colored_graph, in
 }
 
 
+void create_conflict_table(CSRMatrix *csr, int rank, int size, int* colored_graph, int* global_colored_graph, int* conflict_table, int start_vertex, int end_vertex)
+{  
+    for (int vertex = start_vertex; vertex <= end_vertex; vertex++) 
+    {
+        int start_neighbor = csr->row_pointers[vertex];
+        int end_neighbor = csr->row_pointers[vertex + 1];
+
+        for (int neighbor_index = start_neighbor; neighbor_index < end_neighbor; neighbor_index++) 
+        {
+            int neighbor = csr->column_indices[neighbor_index];
+            if (global_colored_graph[vertex] == global_colored_graph[neighbor])
+            {
+                int conflict_vertex = (vertex > neighbor) ? vertex : neighbor; // Store the smaller vertex number to avoid duplicates
+                conflict_table[conflict_vertex] = 1; // Mark conflict in the conflict table
+            }
+        }
+    }
+
+    int* global_conflict_table = (int*)calloc(csr->number_of_rows, sizeof(int));
+    MPI_Allreduce(conflict_table, global_conflict_table, csr->number_of_rows, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    
+    if (rank == 0)
+    {
+        print_colored_graph(global_conflict_table, csr->number_of_rows);
+        bool available[csr->number_of_rows]; // To track which colors are available for each vertex
+        for (int vertex = start_vertex; vertex <= end_vertex; vertex++) {
+            for (int color = 0; color < csr->number_of_rows; color++) {
+                available[color] = true;
+            }
+            if (global_conflict_table[vertex] == 1)
+            {
+                int smallest_legal_color = find_smallest_legal_color(csr, available, global_colored_graph, vertex, 0, csr->number_of_rows-1);
+                printf("smallest legal %d\n", smallest_legal_color);
+                global_colored_graph[vertex] = smallest_legal_color;
+            }
+        
+        }
+
+    // Print the final coloring after sequential processing
+    printf("Final sequential coloring after conflict resolution:\n");
+    print_colored_graph(global_colored_graph, csr->number_of_rows);
+    }
+
+    // Clean up the allocated memory for global_conflict_table
+    free(global_conflict_table);
+}
+
+
 void print_colored_graph(int* colored_graph, int number_of_rows)
 {
     for (int i = 0; i < number_of_rows; i++) {
@@ -53,6 +101,7 @@ int find_smallest_legal_color(CSRMatrix* csr, bool* available, int* colored_grap
 {
     int start_neighbor = csr->row_pointers[vertex];
     int end_neighbor = csr->row_pointers[vertex + 1];
+    printf("start %d end %d\n", start_neighbor, end_neighbor);
     int smallest_legal_color = INVALID_COLOR;
 
     // Mark unavailable colors based on neighbors' colors

@@ -3,13 +3,17 @@
 
 int main(int argc, char *argv[])
 {
+    double start, end;
+
     // Initialize MPI
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    CSRMatrix *csr = create_csr_matrix_from_file("sparse_matrix_examples/mycielskian4.mtx");
+    CSRMatrix *csr = create_csr_matrix_from_file("sparse_matrix_examples/m14b.mtx");
+    MPI_Barrier(MPI_COMM_WORLD);
+    start = MPI_Wtime();
 
     int start_vertex, end_vertex;
     partition_graph(csr->number_of_rows, rank, size, &start_vertex, &end_vertex);
@@ -37,8 +41,11 @@ int main(int argc, char *argv[])
     create_conflict_table(csr, rank, size, colored_graph, global_colored_graph, conflict_table, start_vertex, end_vertex);
 
     if (rank == 0) {
+        end = MPI_Wtime();
         printf("Final sequential coloring after conflict resolution:\n");
-        print_colored_graph(global_colored_graph, csr->number_of_rows);
+//        print_colored_graph(global_colored_graph, csr->number_of_rows);
+//        check_graph(csr, global_colored_graph);
+        printf("CPU time used: %f seconds\n", end - start);
     }
 
     free(global_colored_graph);

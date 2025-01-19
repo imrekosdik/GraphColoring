@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    CSRMatrix *csr = create_csr_matrix_from_file("sparse_matrix_examples/m14b.mtx");
+    CSRMatrix *csr = create_csr_matrix_from_file("sparse_matrix_examples/cti.mtx");
     MPI_Barrier(MPI_COMM_WORLD);
     start = MPI_Wtime();
 
@@ -42,10 +42,7 @@ int main(int argc, char *argv[])
 
     if (rank == 0) {
         end = MPI_Wtime();
-        printf("Final sequential coloring after conflict resolution:\n");
-//        print_colored_graph(global_colored_graph, csr->number_of_rows);
-//        check_graph(csr, global_colored_graph);
-        printf("CPU time used: %f seconds\n", end - start);
+        printf("Node: %d | CPU time used: %f seconds\n", size, end - start);
     }
 
     free(global_colored_graph);

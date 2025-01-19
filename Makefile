@@ -31,7 +31,7 @@ $(OUT_DIR):
 
 # Run the program
 run: all
-	mpirun -np 2 ./$(TARGET)
+	mpirun -np 4 ./$(TARGET)
 
 # Clean rule
 clean:

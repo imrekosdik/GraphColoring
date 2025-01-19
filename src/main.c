@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    CSRMatrix *csr = create_csr_matrix_from_file("sparse_matrix_examples/mycielskian4.mtx");
+    CSRMatrix *csr = create_csr_matrix_from_file("sparse_matrix_examples/G25.mtx");
 
     int start_vertex, end_vertex;
     partition_graph(csr->number_of_rows, rank, size, &start_vertex, &end_vertex);

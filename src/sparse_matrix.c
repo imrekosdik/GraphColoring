@@ -25,6 +25,7 @@ CSRMatrix* create_csr_matrix_from_file(const char *file_name)
         // Read the graph dimensions (rows, columns, nonzeros) once
         if (graphInfoLine) {
             sscanf(line, "%d %d %d", &number_of_rows, &number_of_columns, &number_of_nonzeros);
+            number_of_nonzeros *= 2;
             row_counts = (int *)calloc(number_of_rows, sizeof(int));  // To count non-zeros per row
 
             // Allocate memory for the CSR matrix
@@ -48,7 +49,8 @@ CSRMatrix* create_csr_matrix_from_file(const char *file_name)
         if (fscanf(file, "%d %d", &row, &column) == 2) {
             row--;   // Adjust to 0-based indexing
             column--; // Adjust to 0-based indexing
-            row_counts[row]++;         
+            row_counts[row]++;
+            row_counts[column]++;
         }
 
         // Update row_pointers based on row_counts
@@ -59,48 +61,34 @@ CSRMatrix* create_csr_matrix_from_file(const char *file_name)
         }
     }
 
-    // Rewind the file pointer to read edges again and populate column_indices
+    // Rewind the file and populate column_indices
     rewind(file);
-    int *temp_columns = (int *)malloc(csr->number_of_nonzeros * sizeof(int));
+    int *current_position = (int *)malloc(number_of_rows * sizeof(int));
+    memcpy(current_position, csr->row_pointers, number_of_rows * sizeof(int));
 
-    // Skip the graph dimensions line
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == '%') {
-            continue;
+            continue;  // Skip comment lines
         }
-        // Now populate the column_indices based on the edges
+
+        int row, column;
         if (fscanf(file, "%d %d", &row, &column) == 2) {
             row--;    // Adjust to 0-based indexing
             column--; // Adjust to 0-based indexing
 
-            // Calculate the index to place the column index
-            int index = csr->row_pointers[row] + (row_counts[row] - 1);
-            if (index == -1)
-                index = 0;
-            temp_columns[index] = column;
-            // Decrement the count for the current row as we add an element
-            row_counts[row]--;
+            // Add (row, column)
+            csr->column_indices[current_position[row]++] = column;
+
+            // Add (column, row) for symmetry
+            csr->column_indices[current_position[column]++] = row;
         }
     }
 
-    for (int i = 0; i < csr->number_of_rows; i++) {
-        int start = csr->row_pointers[i];
-        int end = csr->row_pointers[i + 1] - 1;
-        while (start < end) {
-            // Swap column indices to reverse the order
-            int temp = temp_columns[start];
-            temp_columns[start] = temp_columns[end];
-            temp_columns[end] = temp;
-            start++;
-            end--;
-        }
-    }
-
-    memcpy(csr->column_indices, temp_columns, csr->number_of_nonzeros * sizeof(int));
-    // Free row_counts after use
+    // Free temporary arrays
     free(row_counts);
+    free(current_position);
 
-    
+
     // Close the file
     fclose(file);
     return csr;

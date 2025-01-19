@@ -10,8 +10,6 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     CSRMatrix *csr = create_csr_matrix_from_file("sparse_matrix_examples/mycielskian4.mtx");
-    // if (rank == 0)
-        // print_csr_matrix(csr);
 
     int start_vertex, end_vertex;
     partition_graph(csr->number_of_rows, rank, size, &start_vertex, &end_vertex);
@@ -21,7 +19,6 @@ int main(int argc, char *argv[])
 
     color_csr_matrix(csr, rank, size, colored_graph, start_vertex, end_vertex);
 
-    int start_index = start_vertex;
     int* send_count = (int*)malloc(size * sizeof(int));
     int* displs = (int*)malloc(size * sizeof(int));
 
@@ -30,17 +27,22 @@ int main(int argc, char *argv[])
     displs[0] = 0;
     for (int i = 1; i < size; i++) {
         displs[i] = displs[i - 1] + send_count[i - 1];
-    }    
+    }
     MPI_Allgatherv(colored_graph + start_vertex, end_vertex - start_vertex + 1, MPI_INT, global_colored_graph, send_count, displs, MPI_INT, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
-    
+
     // Conflict table (local for each process)
     int* conflict_table = (int*)calloc(csr->number_of_rows, sizeof(int));
 
-    //if (rank == 0)
-    //    print_colored_graph(global_colored_graph, csr->number_of_rows);
-
     create_conflict_table(csr, rank, size, colored_graph, global_colored_graph, conflict_table, start_vertex, end_vertex);
+
+    if (rank == 0) {
+        printf("Final sequential coloring after conflict resolution:\n");
+        print_colored_graph(global_colored_graph, csr->number_of_rows);
+    }
+
+    free(global_colored_graph);
+
     MPI_Finalize();
     return 0;
 }
